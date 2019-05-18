@@ -18,6 +18,7 @@ library(car)
 library(stats)
 library(ggpubr)
 library(plyr)
+library(here)
 
 #### Begin with all layers, Line 32; includes all isotope data for sperm whales with innner layer available
 #### Isolate inner layer, begins line 87
@@ -31,6 +32,8 @@ library(plyr)
 #################################################################################
 Pm2<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/PmIsotopes2_forR.csv',sep=",",header=TRUE)
 View(Pm2) 
+
+Pm2<-read.table(here::here("PmIsotopes2_forR.csv"),sep=",",header=TRUE)
 
 str(Pm2) #Get the structure of variables (factor, numeric, etc.)
 #Need to make Layer a numeric variable: 
