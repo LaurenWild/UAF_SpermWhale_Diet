@@ -1,5 +1,7 @@
-#### Chapter 2 Stable isotope analysis of sperm whale, prey, and baseline isotopes in the Gulf of Alaska. Species include: sperm whales, sablefish, grenadier, shortraker rockfish, spiny dogfish, skates, robust clubhook squid, magister armhook squid, glass squid, and neocalanus copepods. 
-#### Created by Lauren Wild, March 2019
+# This code was developed to analyze variability in stable isotope ratios of sperm whales, and their groundfish/squid prey. 
+# This data is part of Chapter 2 of my Ph.D. dissertation.  
+# Species include sperm whales, sablefish, grenadier, shortraker rockfish, spiny dogfish, skates, robust clubhook squid, magister armhook squid, glass squid, and neocalanus copepods.
+# Author: Lauren Wild, lawild@alaska.edu; March 2019
 
 library(ggplot2)
 library(Hmisc)
@@ -20,9 +22,10 @@ library(viridis) # color scheme for plots that is easy to read (from simmr)
 library(jmv) #Has the mancova function
 library(doBy)
 library(gtools)
+library(here)
 
 #### Begin with all layers, Line 33; includes all isotope data with innner layer available
-#### Isolate inner layer, begins line 88
+#### Isolate inner layer, begins line 90
 #### Prey starts at line 317
 #### TL calculations at 1500; will change..
 
@@ -81,8 +84,7 @@ ggplot(Pm2,aes(as.factor(Sample.Number), d13C, color=as.factor(Layer))) +
   xlab("Sample Number")+
   ylab(expression(paste(delta^13, "C (\u2030)",sep="")))+
   labs(color="Layer")
-######################################################################
-
+#--------------------------------------------------------------------
 
 ######################################################################
 ### Isolate Inner Layer ### SAMPLE SIZE = 33
@@ -216,7 +218,6 @@ PmInnerAvgYr$Year.2=NULL
 PmInnerAvgYr$Year.3=NULL
 colnames(PmInnerAvgYr) <- c("Year", "d15N", "d13C", "SD.N", "SD.C")
 View(PmInnerAvgYr)
-
 
 setwd('/Users/laurenwild/Desktop')
 tiff(filename="PmInner_By_Year.tiff", height = 12, width = 17, units = 'cm', 
@@ -554,13 +555,13 @@ ggplot(Prey3.3, aes(d13C, d15N, color=Species)) + geom_point(size=3)+
 ########################################################
 myfun1<-function(x) {c(m=mean(x), sd=sd(x))}
 All.Prey.Sum<- summaryBy(d15N+d13C~Species, data=Prey3.3, FUN=myfun1) #Just 7 sp
-All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #GpIa
-All.Prey.Sum3<- summaryBy(d15N+d13C~Species, data=Prey3.4, FUN=myfun1) #Just Gp
-All.Prey.Sum4<- summaryBy(d15N+d13C~Species, data=Prey3.5, FUN=myfun1) #Just Gp, SaIa compbined
+#All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #GpIa
+#All.Prey.Sum3<- summaryBy(d15N+d13C~Species, data=Prey3.4, FUN=myfun1) #Just Gp
+#All.Prey.Sum4<- summaryBy(d15N+d13C~Species, data=Prey3.5, FUN=myfun1) #Just Gp, SaIa compbined
 write.table(All.Prey.Sum, file="PmSources.csv", sep=",")
-write.table(All.Prey.Sum2, file="PmSources-GpIa.csv", sep=",")
-write.table(All.Prey.Sum3, file="PmSources-Gp.csv", sep=",")
-write.table(All.Prey.Sum4, file="PmSources_Gp_IaSaCombined.csv", sep=",")
+#write.table(All.Prey.Sum2, file="PmSources-GpIa.csv", sep=",")
+#write.table(All.Prey.Sum3, file="PmSources-Gp.csv", sep=",")
+#write.table(All.Prey.Sum4, file="PmSources_Gp_IaSaCombined.csv", sep=",")
 
 ggplot(All.Prey.Sum, aes(d13C.m, d15N.m, color=Species)) + geom_point(size=3)+
   #geom_text(hjust=0.3,vjust = -0.7, size = 5)+
@@ -656,7 +657,7 @@ color3<- c('lightskyblue', 'darkorchid2','blue1','darkturquoise', 'yellow2', 'de
 #Just Main 7 species:
 setwd('/Users/laurenwild/Desktop')
 
-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
+Fig2<-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
   geom_errorbarh(aes(xmax=All.Sp.Sum$d13C.m+All.Sp.Sum$d13C.sd,xmin=All.Sp.Sum$d13C.m-All.Sp.Sum$d13C.sd, height = 0.01)) +
   geom_errorbar(aes(ymax=All.Sp.Sum$d15N.m+All.Sp.Sum$d15N.sd,ymin=All.Sp.Sum$d15N.m-All.Sp.Sum$d15N.sd, width = 0.01))+
   geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
