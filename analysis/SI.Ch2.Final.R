@@ -7,7 +7,7 @@ library(ggplot2)
 library(Hmisc)
 library(psych)
 library(devtools)
-library(plotrix)  #library for the std.error function; can use mean_se() as well, get same answer
+library(plotrix)  #library for the std.error function; can use mean_se() too, same answer
 library(MASS)
 library(MuMIn) #for dredge
 library(lme4)
@@ -34,7 +34,7 @@ library(here)
 ###### ------ SPERM WHALE SKIN; all samples that include nnner Layer ----- ######
 ##### --------------------------------------------------------------- ########### 
 #################################################################################
-Pm2<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/PmIsotopes2_forR.csv',sep=",",header=TRUE)
+Pm2<-read.table(here::here("PmIsotopes2_forR.csv"),sep=",",header=TRUE)
 View(Pm2) 
 
 str(Pm2) #Get the structure of variables (factor, numeric, etc.)
@@ -59,20 +59,6 @@ hist(Pm2$d13C)
 shapiro.test(Pm2$d13C) #p=0.09494, not sig so it IS normal
 hist(Pm2$d15N)
 shapiro.test(Pm2$d15N) # p=0.1935, not sig so it IS normal
-
-# Test layers with respect to d13C, and d15N:
-# Exclude the "full" sample, just compare layers
-fit1.C<- lme(d13C~Layer, data=Pm2[Pm2$Layer!='Full',], random=~1|Sample.Number)
-summary(fit1.C) #All layers significantly different
-summary(aov(fit1.C))
-plot(fit1.C)
-fit2.C<-lmer(d13C~Layer + (1 | Sample.Number), data=Pm2[Pm2$Layer!='Full',])
-summary(fit2.C)
-
-fit1.N<- lme(d15N~Layer, data=Pm2[Pm2$Layer!='Full',], random=~1|Sample.Number)
-summary(fit1.N) #All layers significantly different
-summary(aov(fit1.N)) #Now "layer" is not significant?????? 
-plot(fit1.N)
 
 ggplot(Pm2,aes(as.factor(Sample.Number),d15N, color=as.factor(Layer))) + 
   geom_point()+
@@ -129,17 +115,15 @@ ggplot(Repeat,aes(d13C,d15N,label=as.factor(Year), color=as.factor(Whale.ID))) +
   labs(color="Month") #takes off as.factor from legend!
 
 # Explore how d13C and d15N values of inner layers change by month: 
-setwd('/Users/laurenwild/Desktop')
-tiff(filename="InnerLayerByMonth.tiff", height = 12, width = 17, units = 'cm', 
-     compression = "lzw", res = 300)
-ggplot(Pm2Inner,aes(d13C,d15N,label=Month, color=as.factor(Month))) + 
-  geom_point(size=4)  +  #scale_color_manual(breaks = Pm2$Whale,values=ccodes) +
-  geom_text(hjust=0.5,vjust = -2, size = 2)+
+InnerByMonth<-ggplot(Pm2Inner,aes(d13C,d15N,label=Month, color=as.factor(Month))) + 
+  geom_point(size=5)  + 
+  geom_text(hjust=0.5,vjust = -1, size = 8)+
   xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
   ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
   theme_bw(base_size = 20, base_family = "Helvetica") +
   labs(color="Month") #takes off as.factor from legend!
-dev.off()
+#setwd('/Users/laurenwild/Desktop')
+ggsave(filename="InnerLayerByMonth.png", plot=InnerByMonth, dpi=500, width=17, height=12, units="in")
 
 MonthLabs<-c("May", "Jun", "Jul", "Aug", "Sep")
 I.fit1.1 <- aov(d13C~Month, data=Pm2Inner)
@@ -173,7 +157,6 @@ ggplot(Pm2Inner, aes(as.factor(Month2), d15N)) + geom_boxplot() +
   theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank())
 
 ##Pairwise t-test to test if different months have sig diff in d13C & d15N values;
-## NEED TO LOOK UP p.adj TREATMENTS
 tapply(Pm2Inner$d13C,INDEX=list(Pm2Inner$Month), FUN=mean)
 pairwise.t.test(Pm2Inner$d13C, Pm2Inner$Month, p.adj="none")
 tapply(Pm2Inner$d15N,INDEX=list(Pm2Inner$Month), FUN=mean)
@@ -212,17 +195,13 @@ d13C.In.Mean <- aggregate(d13C~Year, data=Pm2Inner, mean)
 d15N.In.SD <- aggregate(d15N~Year, data=Pm2Inner, sd)
 d13C.In.SD <- aggregate(d13C~Year, data=Pm2Inner, sd)
 PmInnerAvgYr <- data.frame(cbind(d15N.In.Mean,d13C.In.Mean,d15N.In.SD, d13C.In.SD))
-View(PmInnerAvgYr)
 PmInnerAvgYr$Year.1=NULL
 PmInnerAvgYr$Year.2=NULL
 PmInnerAvgYr$Year.3=NULL
 colnames(PmInnerAvgYr) <- c("Year", "d15N", "d13C", "SD.N", "SD.C")
 View(PmInnerAvgYr)
 
-setwd('/Users/laurenwild/Desktop')
-tiff(filename="PmInner_By_Year.tiff", height = 12, width = 17, units = 'cm', 
-     compression = "lzw", res = 200)
-ggplot(PmInnerAvgYr,aes(d13C,d15N, label=Year)) + geom_point(size=4) +
+InLayerByYear<-ggplot(PmInnerAvgYr,aes(d13C,d15N, label=Year)) + geom_point(size=4) +
   geom_errorbarh(aes(xmax=PmInnerAvgYr$d13C+PmInnerAvgYr$SD.C,xmin=PmInnerAvgYr$d13C-PmInnerAvgYr$SD.C, height = 0.01)) +
   geom_errorbar(aes(ymax=PmInnerAvgYr$d15N+PmInnerAvgYr$SD.N,ymin=PmInnerAvgYr$d15N-PmInnerAvgYr$SD.N, width = 0.01))+
   geom_text(hjust=0.5,vjust = -2, size = 3)+
@@ -230,8 +209,8 @@ ggplot(PmInnerAvgYr,aes(d13C,d15N, label=Year)) + geom_point(size=4) +
   ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
   theme_bw(base_size = 24, base_family = "Helvetica")+
   labs(color="Year") #takes off as.factor from legend! 
-dev.off()
 
+#Isotope ratios colored by year
 ggplot(Pm2Inner,aes(d13C,d15N, color=as.factor(Year), label=Year)) + geom_point(size=4) +
   geom_text(hjust=0.5,vjust = -2, size = 3)+
   xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
@@ -239,6 +218,7 @@ ggplot(Pm2Inner,aes(d13C,d15N, color=as.factor(Year), label=Year)) + geom_point(
   theme_bw(base_size = 24, base_family = "Helvetica")+
   labs(color="Year") #takes off as.factor from legend!
 
+#Isotope ratios colored by season
 ggplot(Pm2Inner,aes(d13C,d15N,color=Season)) + 
   geom_point(size=4)  +  #scale_color_manual(breaks = Pm2$Whale,values=ccodes) +
   xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
@@ -247,7 +227,7 @@ ggplot(Pm2Inner,aes(d13C,d15N,color=Season)) +
   theme_bw(base_size = 20, base_family = "Helvetica") +
   labs(color="Season") #takes off as.factor from legend!
 
-#Plot Frequent versus non-frequent depredators
+#Isotope ratios for Frequent versus non-frequent depredators
 ggplot(Pm2Inner,aes(d13C,d15N, color=as.factor(Frequent))) + geom_point(size=4) +
   xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
   ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
@@ -265,6 +245,7 @@ ggplot(Pm2InnerSerial,aes(d13C,d15N, color=as.factor(Frequent))) + geom_point(si
   labs(color="Frequent") + theme(legend.position = c(0.15, 0.8))+
   theme(legend.title=element_blank(),legend.text=element_text(size=8)) #legend.direction = "horizontal"
 
+#Isotope ratios for old vs. recent samples
 ggplot(Pm2Inner,aes(d13C,d15N, color=as.factor(Recent))) + geom_point(size=4) +
   xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
   ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
@@ -273,15 +254,6 @@ ggplot(Pm2Inner,aes(d13C,d15N, color=as.factor(Recent))) + geom_point(size=4) +
   theme(legend.title=element_blank(),legend.text=element_text(size=8))+ #legend.direction = "horizontal"
   scale_color_discrete(breaks=c("Old", "Recent"),
                        labels=c("Old (<2010)", "Recent (>2010)"))
-
-Pm2InnerRecent<-subset(Pm2Inner, Recent=="Recent")
-ggplot(Pm2InnerRecent,aes(d13C,d15N, color=as.factor(Frequent))) + geom_point(size=4) +
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  scale_color_manual(values=c("Frequent"="purple", "Non-Frequent"="blue"))+
-  theme_bw(base_size = 24, base_family = "Helvetica")+
-  labs(color="Frequent") + theme(legend.position = c(0.85, 0.2))+
-  theme(legend.title=element_blank(),legend.text=element_text(size=8)) #legend.direction = "horizontal"
 
 InnerOldRecentC<-aov(d13C~Recent, data=Pm2Inner) #sig @ 5% level recent vs. old for d13C
 InnerOldRecentN<-aov(d15N~Recent, data=Pm2Inner) #not sig recent vs. old for d15N
@@ -295,7 +267,6 @@ write.table(Pm2Inner, file="PmSIMMData.csv", sep=",")
 ##### BUILD SEPARATE Pm DATAFRAMES FOR SERIAL, NONSERIAL, RECENT, & OLD
 ##### To input later for use with Mixing Models #######
 #########################################################################
-
 Pm2InnerSerial<-subset(Pm2Inner, Frequent=="Frequent")
 View(Pm2InnerSerial)
 write.table(Pm2InnerSerial, file="PmSISerial.csv", sep=",")
@@ -317,10 +288,9 @@ write.table(Pm2InnerOld, file="PmSIOld.csv", sep=",")
 ## ---------------------------------------------------------- ##
 ## -----------------------  PREY  --------------------------- ##
 ################################################################
-
 # Start with prey spreadsheet that has already had outliers omitted, and testing for how bulk d15N vales may be changed by lipid extraction: 
 
-Prey3<-read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/Prey-outliers-removed-Sep2018.csv',sep=",",header=TRUE)
+Prey3<-read.table(here::here('data/Prey-outliers-removed-Sep2018.csv'),sep=",",header=TRUE)
 View(Prey3)
 Prey3$Depth.Strata<-as.factor(Prey3$Depth.Strata) #Needs to be factor for significance testing
 
@@ -527,54 +497,18 @@ summary.aov(Berry) #Length and d15N signficant
 summary(aov(d15N.bulk~Length, data=Bm2)) #Significant
 summary(aov(d13C.LE~Depth.Strata, data=Bm2)) #significant at 5% level
 
+############################################################
 
-#Then combine everything back to new reduced dataset
-Prey3.2<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2,Ia,Gp) 
-Prey3.3<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2)
-Prey3.4<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2,Gp)
-Prey3.5<-rbind(Or,Cy2,Af2,SaIa,Sb2,Rb,Bm2,Gp)
+#Combine all prey back to new reduced dataset
+Prey3.1<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2)
 
 #Now want the LE values of d13C ... 
-Prey3.2$d13C<- Prey3.2$d13C.LE
-Prey3.3$d13C<- Prey3.3$d13C.LE
-Prey3.4$d13C<- Prey3.4$d13C.LE
-Prey3.5$d13C<- Prey3.5$d13C.LE
+Prey3.1$d13C<- Prey3.1$d13C.LE
 
-color2<-c("red","forestgreen","cyan1","black","blue","purple","darkslategray3", "darkgoldenrod")
-ggplot(Prey3.2, aes(d13C, d15N, color=Species)) + geom_point(size=3)+
-  xlab(expression(paste(delta^13, "C (\u2030)", sep='')))+
-  ylab(expression(paste(delta^15, "N (\u2030)", sep='')))+
-  scale_colour_viridis_d()
-color3<-c("red","forestgreen","black","blue","purple","darkslategray3", "darkgoldenrod")
-ggplot(Prey3.3, aes(d13C, d15N, color=Species)) + geom_point(size=3)+
-  xlab(expression(paste(delta^13, "C (\u2030)", sep='')))+
-  ylab(expression(paste(delta^15, "N (\u2030)", sep='')))+
-  scale_colour_viridis_d()
-
-########################################################
-########################################################
 myfun1<-function(x) {c(m=mean(x), sd=sd(x))}
-All.Prey.Sum<- summaryBy(d15N+d13C~Species, data=Prey3.3, FUN=myfun1) #Just 7 sp
-#All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #GpIa
-#All.Prey.Sum3<- summaryBy(d15N+d13C~Species, data=Prey3.4, FUN=myfun1) #Just Gp
-#All.Prey.Sum4<- summaryBy(d15N+d13C~Species, data=Prey3.5, FUN=myfun1) #Just Gp, SaIa compbined
-write.table(All.Prey.Sum, file="PmSources.csv", sep=",")
-#write.table(All.Prey.Sum2, file="PmSources-GpIa.csv", sep=",")
-#write.table(All.Prey.Sum3, file="PmSources-Gp.csv", sep=",")
-#write.table(All.Prey.Sum4, file="PmSources_Gp_IaSaCombined.csv", sep=",")
+All.Prey.Sum<- summaryBy(d15N+d13C~Species, data=Prey3.1, FUN=myfun1) #Main 7 species
 
-ggplot(All.Prey.Sum, aes(d13C.m, d15N.m, color=Species)) + geom_point(size=3)+
-  #geom_text(hjust=0.3,vjust = -0.7, size = 5)+
-  geom_errorbarh(aes(xmax=All.Prey.Sum$d13C.m+All.Prey.Sum$d13C.sd,xmin=All.Prey.Sum$d13C.m-All.Prey.Sum$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Prey.Sum$d15N.m+All.Prey.Sum$d15N.sd,ymin=All.Prey.Sum$d15N.m-All.Prey.Sum$d15N.sd, width = 0.01))+
-  xlab(expression(paste(delta^13, "C (\u2030)")))+
-  ylab(expression(paste(delta^15, "N (\u2030)")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica")+
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.title=element_text(size=10))+
-  theme(legend.text=element_text(size=8))
-#theme(legend.position = c(0.9, 0.75))
+write.table(All.Prey.Sum, file="PmSources.csv", sep=",")
 
 ### This plot has each prey as a different color, and black text within plot
 ggplot(All.Prey.Sum, aes(d13C.m, d15N.m, color=Species, label=Species)) + geom_point(size=3)+
@@ -588,156 +522,100 @@ ggplot(All.Prey.Sum, aes(d13C.m, d15N.m, color=Species, label=Species)) + geom_p
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   theme(legend.position="none")
 
-Shape1<- c(3,8,17,18,7,19,15,13)
-ggplot(All.Prey.Sum,aes(d13C.m,d15N.m, label=Species, shape=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Prey.Sum$d13C.m+All.Prey.Sum$d13C.sd,xmin=All.Prey.Sum$d13C.m-All.Prey.Sum$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Prey.Sum$d15N.m+All.Prey.Sum$d15N.sd,ymin=All.Prey.Sum$d15N.m-All.Prey.Sum$d15N.sd, width = 0.01))+
-  geom_text(hjust=-0.06,vjust = -0.7, size = 5)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  scale_shape_manual(values=Shape1)+
-  theme_bw(base_size = 24, base_family = "Helvetica")
-
-### Add glass squid & ragfish prey species; 
-### Prey as a different color, and black text within plot
-ggplot(All.Prey.Sum2, aes(d13C.m, d15N.m, color=Species, label=Species)) + geom_point(size=3)+
-  geom_errorbarh(aes(xmax=All.Prey.Sum2$d13C.m+All.Prey.Sum2$d13C.sd,xmin=All.Prey.Sum2$d13C.m-All.Prey.Sum2$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Prey.Sum2$d15N.m+All.Prey.Sum2$d15N.sd,ymin=All.Prey.Sum2$d15N.m-All.Prey.Sum2$d15N.sd, width = 0.01))+
-  geom_text(color="black",hjust=-0.05,vjust = -0.7, size = 5)+
-  xlab(expression(paste(delta^13, "C (\u2030)")))+
-  ylab(expression(paste(delta^15, "N (\u2030)")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica")+
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-
-#Add humboldt squid for biplot:
-All.Prey.Sum5<-read.csv('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/PmSources-GpIaDg.csv',sep=",",header=TRUE)
-ggplot(All.Prey.Sum5, aes(Mean.d13C, Mean.d15N, color=Species, label=Species)) + geom_point(size=3)+
-  geom_errorbarh(aes(xmax=All.Prey.Sum5$Mean.d13C+All.Prey.Sum5$SD.d13C,xmin=All.Prey.Sum5$Mean.d13C-All.Prey.Sum5$SD.d13C, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Prey.Sum4$Mean.d15N+All.Prey.Sum5$SD.d15N,ymin=All.Prey.Sum5$Mean.d15N-All.Prey.Sum5$SD.d15N, width = 0.01))+
-  geom_text(color="black",hjust=-0.05,vjust = -0.7, size = 5)+
-  xlab(expression(paste(delta^13, "C (\u2030)")))+
-  ylab(expression(paste(delta^15, "N (\u2030)")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica")+
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-
 #----------------------------------------------------------------
 
 # Add sperm whales in to the top of it
-Pm.Prey <- cbind(Prey3.3)
-View(Pm.Prey)
+Pm.Prey <- cbind(Prey3.1)
+
+#use sperm whale inner layer data frame
+Pm2Inner$Species<-"Sperm Whale" 
+Pm2Inner2<-Pm2Inner[,c(1,3,4)]
+Prey3.1<-Prey3.1[,c(1,30,31)]
+Pm.Prey<-rbind(Prey3.1, Pm2Inner2) #Just 7 main species
+str(Pm.Prey)
+
+#set up data sheet with averages and std.error of each species
+All.Sp.Sum <-summaryBy(d15N+d13C~Species, data=Pm.Prey, FUN=myfun1) #All 7  
+View(All.Sp.Sum)
+
+
+ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
+  geom_errorbarh(aes(xmax=All.Sp.Sum$d13C.m+All.Sp.Sum$d13C.sd,xmin=All.Sp.Sum$d13C.m-All.Sp.Sum$d13C.sd, height = 0.01)) +
+  geom_errorbar(aes(ymax=All.Sp.Sum$d15N.m+All.Sp.Sum$d15N.sd,ymin=All.Sp.Sum$d15N.m-All.Sp.Sum$d15N.sd, width = 0.01))+
+  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
+  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
+  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
+  scale_color_viridis_d()+
+  theme_bw(base_size = 24, base_family = "Helvetica") +
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme(legend.position="none")
+
+Fig2<-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species)) + geom_point(size=8) +
+  geom_errorbarh(aes(xmax=All.Sp.Sum$d13C.m+All.Sp.Sum$d13C.sd,xmin=All.Sp.Sum$d13C.m-All.Sp.Sum$d13C.sd, height = 0.01)) +
+  geom_errorbar(aes(ymax=All.Sp.Sum$d15N.m+All.Sp.Sum$d15N.sd,ymin=All.Sp.Sum$d15N.m-All.Sp.Sum$d15N.sd, width = 0.01))+
+  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 10)+
+  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+ 
+  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
+  theme_bw(base_size = 24, base_family = "Helvetica") +
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme(axis.text=element_text(size=28), axis.title=element_text(size=32,face="bold"))+
+  theme(legend.position="none")
+ggsave(filename="Fig2_AllSp_Isotopes.png", plot=Fig2, dpi=500, width=17, height=12, units="in")
+
+##########################################################################
+
+### APPENDIX 1: Show how ragfish fit into species plots; 
+### ----------------------------------------------------
+Prey3.2<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2,Ia) 
+Prey3.2$d13C<- Prey3.2$d13C.LE
+All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #Add Ia
+write.table(All.Prey.Sum2, file="PmSourceWithRagfishs.csv", sep=",")
+
+# Add sperm whales in to the top of it
+Pm.Prey <- cbind(Prey3.2)
 
 #use sperm whale inner layer data frame
 Pm2Inner$Species<-"Sperm Whale" 
 Pm2Inner2<-Pm2Inner[,c(1,3,4)]
 
-Prey3.6<-Prey3.3[,c(1,30,31)]
-#Prey3.7<-Prey3.2[,c(1,30,31)]
-#Prey3.8<-Prey3.4[,c(1,30,31)]
-Pm.Prey2<-rbind(Prey3.6, Pm2Inner2) #Just 7 main species
-#Pm.Prey3<-rbind(Prey3.8, Pm2Inner2) #All 7 plus just Gp
-#Pm.Prey4<-rbind(Prey3.7, Pm2Inner2) #GpIa
+Prey3.2<-Prey3.2[,c(1,30,31)]
+Pm.Prey2<-rbind(Prey3.2, Pm2Inner2) #Top 7 and Ragfish
 str(Pm.Prey2)
-#str(Pm.Prey3)
-#str(Pm.Prey4)
-#PmInnerAvg<-summaryBy(d15N + d13C ~ Species, data=Pm2Inner2, FUN=myfun1)
 
 #set up data sheet with averages and std.error of each species
-All.Sp.Sum <-summaryBy(d15N+d13C~Species, data=Pm.Prey2, FUN=myfun1) #All 7  
-View(All.Sp.Sum)
-#All.Sp.Sum2 <-summaryBy(d15N+d13C~Species, data=Pm.Prey3, FUN=myfun1) #
-#All.Sp.Sum3 <-summaryBy(d15N+d13C~Species, data=Pm.Prey4, FUN=myfun1) #
-#All.Sp.Sum4<- All.Sp.Sum2[-c(5), ] #Another way to take out ragfish... ? 
+All.Sp.Sum2 <-summaryBy(d15N+d13C~Species, data=Pm.Prey2, FUN=myfun1) #All 7  
+View(All.Sp.Sum2)
 
-Shape1<- c(3,8,17,18,7,19,15,13)
-color3<- c('lightskyblue', 'darkorchid2','blue1','darkturquoise', 'yellow2', 'deeppink',  "coral1", 'darkgoldenrod1')
-#Just Main 7 species:
-setwd('/Users/laurenwild/Desktop')
-
-Fig2<-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum$d13C.m+All.Sp.Sum$d13C.sd,xmin=All.Sp.Sum$d13C.m-All.Sp.Sum$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum$d15N.m+All.Sp.Sum$d15N.sd,ymin=All.Sp.Sum$d15N.m-All.Sp.Sum$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-
-setwd('/Users/laurenwild/Desktop')
-ggsave(filename="Fig1_Biopsy_Prey_Map.png", plot=Fig1, dpi=500, width=17, height=12, units="in")
-tiff(filename="AllSp.tiff", height = 12, width = 17, units = 'cm', 
-     compression = "lzw", res = 200)
-
-# Glass Squid, Ragfish included:
-color4<- c('lightskyblue', 'lavenderblush3', 'darkorchid2','blue1','green4', 'darkturquoise', 'yellow2', 'deeppink',  "coral1", 'darkgoldenrod1')
-ggplot(All.Sp.Sum2,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
+Ap1_AllSpRagfish<-ggplot(All.Sp.Sum2,aes(d13C.m,d15N.m, label=Species)) + 
+  geom_point(size=8) +
   geom_errorbarh(aes(xmax=All.Sp.Sum2$d13C.m+All.Sp.Sum2$d13C.sd,xmin=All.Sp.Sum2$d13C.m-All.Sp.Sum2$d13C.sd, height = 0.01)) +
   geom_errorbar(aes(ymax=All.Sp.Sum2$d15N.m+All.Sp.Sum2$d15N.sd,ymin=All.Sp.Sum2$d15N.m-All.Sp.Sum2$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-setwd('/Users/laurenwild/Desktop')
-tiff(filename="AllSp.tiff", height = 12, width = 17, units = 'cm', 
-     compression = "lzw", res = 200)
-ggplot(All.Sp.Sum2,aes(d13C.m,d15N.m, label=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum2$d13C.m+All.Sp.Sum2$d13C.sd,xmin=All.Sp.Sum2$d13C.m-All.Sp.Sum2$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum2$d15N.m+All.Sp.Sum2$d15N.sd,ymin=All.Sp.Sum2$d15N.m-All.Sp.Sum2$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
+  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 10)+
+  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+ 
   ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
   theme_bw(base_size = 24, base_family = "Helvetica") +
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme(axis.text=element_text(size=28), axis.title=element_text(size=32,face="bold"))+
   theme(legend.position="none")
-dev.off()
+ggsave(filename="Appendix1_AllSpWithRagfish_Isotopes.png", plot=Ap1_AllSpRagfish, dpi=500, width=17, height=12, units="in")
 
-setwd('/Users/laurenwild/Desktop')
-tiff(filename="AllSpGp.tiff", height = 12, width = 17, units = 'cm', 
-     compression = "lzw", res = 200)
-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum$d13C.m+All.Sp.Sum$d13C.sd,xmin=All.Sp.Sum$d13C.m-All.Sp.Sum$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum$d15N.m+All.Sp.Sum$d15N.sd,ymin=All.Sp.Sum$d15N.m-All.Sp.Sum$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-dev.off()
 
-color5<- c('lightskyblue', 'lavenderblush3', 'darkorchid2','blue1', 'darkturquoise', 'yellow2', 'deeppink',  "coral1", 'darkgoldenrod1')
-ggplot(All.Sp.Sum3,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum3$d13C.m+All.Sp.Sum3$d13C.sd,xmin=All.Sp.Sum3$d13C.m-All.Sp.Sum3$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum3$d15N.m+All.Sp.Sum3$d15N.sd,ymin=All.Sp.Sum3$d15N.m-All.Sp.Sum3$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
+#Add humboldt squid for biplot:
+All.Prey.Sum3<-read.table(here::here('data/PmSources-IaDg.csv'),sep=",",header=TRUE)
+ggplot(All.Prey.Sum3, aes(Mean.d13C, Mean.d15N, color=Species, label=Species)) + geom_point(size=3)+
+  geom_errorbarh(aes(xmax=All.Prey.Sum3$Mean.d13C+All.Prey.Sum3$SD.d13C,xmin=All.Prey.Sum3$Mean.d13C-All.Prey.Sum3$SD.d13C, height = 0.01)) +
+  geom_errorbar(aes(ymax=All.Prey.Sum3$Mean.d15N+All.Prey.Sum3$SD.d15N,ymin=All.Prey.Sum3$Mean.d15N-All.Prey.Sum3$SD.d15N, width = 0.01))+
+  geom_text(color="black",hjust=-0.05,vjust = -0.7, size = 5)+
+  xlab(expression(paste(delta^13, "C (\u2030)")))+
+  ylab(expression(paste(delta^15, "N (\u2030)")))+
   scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
+  theme_bw(base_size = 24, base_family = "Helvetica")+
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
   theme(legend.position="none")
 
-ggplot(All.Sp.Sum4,aes(d13C.m,d15N.m, label=Species, color=Species)) + geom_point(size=5) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum4$d13C.m+All.Sp.Sum4$d13C.sd,xmin=All.Sp.Sum4$d13C.m-All.Sp.Sum4$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum4$d15N.m+All.Sp.Sum4$d15N.sd,ymin=All.Sp.Sum4$d15N.m-All.Sp.Sum4$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 4)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
 
 ##############################################################################
-##### ------- Add Baseline Data, First Import and Reorganize it: ------- #####
+##### ------- Add Baseline Data, For Trophic Level Calculations: ------- #####
 ##############################################################################
 
 ### COPEPODS ### BASELINE ### 
