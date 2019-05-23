@@ -7,16 +7,17 @@
 # NOTE: Load the tidyverse library first. 
 # I have received a funky error message from the map_data() function 
 # if I load the "maps" library prior to the "tidyverse" (or "ggplot2") library.
-install.packages('tidyverse')
+#install.packages('tidyverse')
 library(tidyverse) # Contains the ggplot2 and dplyr packages
-install.packages('PBSmapping')
+#install.packages('PBSmapping')
 library(PBSmapping) # From which we'll use the clipPolys function
-install.packages('marmap')
+#install.packages('marmap')
 library(marmap) # From which we can get bathymetry
-install.packages('maps')
+#install.packages('maps')
 library(maps) # From which we get the world2 basemap
-install.packages('mapproj')
+#install.packages('mapproj')
 library(mapproj)
+library(ggplot2)
 
 ########################################################
 # MAP OF EASTERN GOA WITH BIOPSY & PREY LOCATIONS #
@@ -53,6 +54,11 @@ Prey2$Type<-"Normal"
 Prey2[124,"Type"]<- list(c("Ragfish"))
 Prey2[125,"Type"] <- list(c("Ragfish"))
 
+Ragfish<-Prey[124:125,]
+Prey2<-Prey[-c(124:125),]
+
+
+
 #Create the map:
 Fig1 = ggplot() + 
   geom_polygon(data=world2, aes(x=X, y=Y, group=factor(PID)), fill="lightgrey", col="black", lwd=0.25) +
@@ -60,9 +66,9 @@ Fig1 = ggplot() +
   theme_bw()+
   theme(panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank()) +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank()) +
-  geom_point(data=Prey2,aes(x=Longitude4,y=Latitude3, color=Type),shape=4,size=4, stroke=3)+
-  scale_color_manual(values=c("red","black")) +
-  geom_point(data=Biopsy, aes(x=Longitude2, y=Latitude), shape=1,size=4, col="blue", stroke=3)+
+  geom_point(data=Prey2,aes(x=Longitude4,y=Latitude3),shape = 4,size=4,col="red",stroke=3)+
+  geom_point(data=Ragfish,aes(x=Longitude4,y=Latitude3),shape=2,size=4,col="black",stroke=3)+
+  geom_point(data=Biopsy, aes(x=Longitude2, y=Latitude),shape=1,size=4,col="blue",stroke=3)+
   theme(axis.text.y = element_text(family="Arial", size=16)) +
   theme(axis.text.x = element_text(family="Arial", size=16)) +
   theme(axis.title.x = element_text(size=20)) +
@@ -70,7 +76,7 @@ Fig1 = ggplot() +
   xlab("Longitude")+
   ylab("Latitude")+
   theme(legend.position="none")
-
+Fig1
 setwd('/Users/laurenwild/Desktop')
 ggsave(filename="Fig1_Biopsy_Prey_Map.png", plot=Fig1, dpi=500, width=12, height=8, units="in")
 
