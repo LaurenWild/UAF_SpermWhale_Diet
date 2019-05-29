@@ -562,57 +562,6 @@ Fig2<-ggplot(All.Sp.Sum,aes(d13C.m,d15N.m, label=Species)) + geom_point(size=8) 
   theme(legend.position="none")
 ggsave(filename="Fig2_AllSp_Isotopes.png", plot=Fig2, dpi=500, width=17, height=12, units="in")
 
-##########################################################################
-
-### APPENDIX 1: Show how ragfish fit into species plots; 
-### ----------------------------------------------------
-Prey3.2<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2,Ia) 
-Prey3.2$d13C<- Prey3.2$d13C.LE
-All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #Add Ia
-write.table(All.Prey.Sum2, file="PmSourceWithRagfishs.csv", sep=",")
-
-# Add sperm whales in to the top of it
-Pm.Prey <- cbind(Prey3.2)
-
-#use sperm whale inner layer data frame
-Pm2Inner$Species<-"Sperm Whale" 
-Pm2Inner2<-Pm2Inner[,c(1,3,4)]
-
-Prey3.2<-Prey3.2[,c(1,30,31)]
-Pm.Prey2<-rbind(Prey3.2, Pm2Inner2) #Top 7 and Ragfish
-str(Pm.Prey2)
-
-#set up data sheet with averages and std.error of each species
-All.Sp.Sum2 <-summaryBy(d15N+d13C~Species, data=Pm.Prey2, FUN=myfun1) #All 7  
-View(All.Sp.Sum2)
-
-Ap1_AllSpRagfish<-ggplot(All.Sp.Sum2,aes(d13C.m,d15N.m, label=Species)) + 
-  geom_point(size=8) +
-  geom_errorbarh(aes(xmax=All.Sp.Sum2$d13C.m+All.Sp.Sum2$d13C.sd,xmin=All.Sp.Sum2$d13C.m-All.Sp.Sum2$d13C.sd, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Sp.Sum2$d15N.m+All.Sp.Sum2$d15N.sd,ymin=All.Sp.Sum2$d15N.m-All.Sp.Sum2$d15N.sd, width = 0.01))+
-  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 10)+
-  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+ 
-  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
-  theme_bw(base_size = 24, base_family = "Helvetica") +
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(axis.text=element_text(size=28), axis.title=element_text(size=32,face="bold"))+
-  theme(legend.position="none")
-ggsave(filename="Appendix1_AllSpWithRagfish_Isotopes.png", plot=Ap1_AllSpRagfish, dpi=500, width=17, height=12, units="in")
-
-
-#Add humboldt squid for biplot:
-All.Prey.Sum3<-read.table(here::here('data/PmSources-IaDg.csv'),sep=",",header=TRUE)
-ggplot(All.Prey.Sum3, aes(Mean.d13C, Mean.d15N, color=Species, label=Species)) + geom_point(size=3)+
-  geom_errorbarh(aes(xmax=All.Prey.Sum3$Mean.d13C+All.Prey.Sum3$SD.d13C,xmin=All.Prey.Sum3$Mean.d13C-All.Prey.Sum3$SD.d13C, height = 0.01)) +
-  geom_errorbar(aes(ymax=All.Prey.Sum3$Mean.d15N+All.Prey.Sum3$SD.d15N,ymin=All.Prey.Sum3$Mean.d15N-All.Prey.Sum3$SD.d15N, width = 0.01))+
-  geom_text(color="black",hjust=-0.05,vjust = -0.7, size = 5)+
-  xlab(expression(paste(delta^13, "C (\u2030)")))+
-  ylab(expression(paste(delta^15, "N (\u2030)")))+
-  scale_color_viridis_d()+
-  theme_bw(base_size = 24, base_family = "Helvetica")+
-  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
-  theme(legend.position="none")
-
 
 ##############################################################################
 ##### ------- Add Baseline Data, For Trophic Level Calculations: ------- #####

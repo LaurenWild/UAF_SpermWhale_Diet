@@ -15,3 +15,349 @@ library(jmv) #Has the mancova function
 library(doBy)
 library(gtools)
 library(here)
+library(rjags)
+library(siar)
+library(simmr)
+library(MixSIAR)  ### Code starts line 853
+library(patternplot) #to put patterns in the fill of boxplots, etc. 
+
+
+Pm2<-read.table(here::here("PmIsotopes2_forR.csv"),sep=",",header=TRUE)
+View(Pm2) 
+
+str(Pm2) #Get the structure of variables (factor, numeric, etc.)
+#Need to make Layer a numeric variable: 
+Pm2["Layer2"] <- NA #Creates new column
+Pm2$Layer2<- 5-as.numeric(Pm2$Layer) # Creates a new column making layer numeric
+levels(Pm2$Layer)
+str(Pm2$Layer2)
+levels(Pm2$Month)
+
+Pm2Inner<- Pm2[Pm2$Layer=="Inner",]
+dim(Pm2Inner) #length of data set is 33 samples
+
+# Set up month as a numeric value
+match(Pm2Inner$Month, month.abb)
+sapply(Pm2Inner$Month,function(x) grep(paste("(?i)",x,sep=""),month.abb))
+Pm2Inner$Month2<- match(Pm2Inner$Month, month.abb)
+
+#Convert date to julian date and add column to data frame. 
+library(date)
+class(Pm2Inner$Date) #It's a factor variable
+Pm2Inner$Date2<- as.POSIXlt(Pm2Inner$Date, format='%m/%d/%y')
+class(Pm2Inner$Date2) #Now class is POSIXlt POSIXt
+View(Pm2Inner) #Should have dates in Date2 Column! 
+doy <- strftime(Pm2Inner$Date2, format = "%j") # new vector of dates in julian format
+doy<-as.numeric(doy) #make julian date numeric
+Pm2Inner$doy<-doy #add julian date to data frame
+View(Pm2Inner) # Check everything looks good! 
+
+##################################################################################
+
+
+### APPENDIX 1: Show how ragfish fit into species plots; 
+### ----------------------------------------------------
+Prey3<-read.table(here::here('data/Prey-outliers-removed-Sep2018.csv'),sep=",",header=TRUE)
+View(Prey3)
+Prey3$Depth.Strata<-as.factor(Prey3$Depth.Strata) 
+Or<-subset(Prey3, Species=='Clubhook Squid')
+Ia<-subset(Prey3, Species=='Ragfish')
+Af<-subset(Prey3, Species=="Sablefish")
+Cy<-subset(Prey3, Species=='Grenadier')
+Ap<-subset(Prey3, Sub.Species=='Giant Grenadier')
+Cy2<-subset(Prey3, Sub.Species=='Grenadier')
+Sb<-subset(Prey3, Species=="Shortraker Rockfish")
+Sa<-subset(Prey3, Species=="Spiny Dogfish")
+Rb<-subset(Prey3, Species=="Skate")
+Rr<-subset(Prey3, Sub.Species=="Longnose Skate")
+Bm<-subset(Prey3, Species=='Magister Squid')
+Gp<-subset(Prey3, Species=='Glass Squid')
+
+# Make sure d15N bulk value is used for each species, and create a final d15N and d13C column
+Af2<-Af[!is.na(Af$d15N.bulk),]
+Af2$d15N<-Af2$d15N.bulk
+Cy2<-Cy[!is.na(Cy$d15N.bulk),]
+Cy2$d15N<-Cy2$d15N.bulk
+Sb2<-Sb[!is.na(Sb$d15N.bulk),]
+Sb2$d15N<-Sb2$d15N.bulk
+Sa2<-Sa[!is.na(Sa$d15N.bulk),]
+Sa2$d15N<-Sa2$d15N.bulk
+Bm2<-Bm[!is.na(Bm$d15N.bulk),]
+Bm2$d15N<-Bm2$d15N.bulk
+Ia$d15N<-Ia$d15N.bulk
+Gp$d15N<-Gp$d15N.bulk
+Or$d15N<-Or$d15N.bulk
+Rb$d15N<-Rb$d15N.LE
+mean(Ia$d15N.bulk)
+sd(Ia$d15N.bulk)
+mean(Ia$d13C.LE)
+sd(Ia$d13C.LE)
+
+Prey3.2<-rbind(Or,Cy2,Af2,Sb2,Sa2,Rb,Bm2,Ia) 
+Prey3.2$d13C<- Prey3.2$d13C.LE
+All.Prey.Sum2<- summaryBy(d15N+d13C~Species, data=Prey3.2, FUN=myfun1) #Add Ia
+write.table(All.Prey.Sum2, file="PmSourceWithRagfishs.csv", sep=",")
+
+# Add sperm whales in to the top of it
+Pm.Prey <- cbind(Prey3.2)
+
+#use sperm whale inner layer data frame
+Pm2Inner$Species<-"Sperm Whale" 
+Pm2Inner2<-Pm2Inner[,c(1,3,4)]
+
+Prey3.2<-Prey3.2[,c(1,30,31)]
+Pm.Prey2<-rbind(Prey3.2, Pm2Inner2) #Top 7 and Ragfish
+str(Pm.Prey2)
+
+#set up data sheet with averages and std.error of each species
+All.Sp.Sum2 <-summaryBy(d15N+d13C~Species, data=Pm.Prey2, FUN=myfun1) #All 7  
+View(All.Sp.Sum2)
+
+Ap1_AllSpRagfish<-ggplot(All.Sp.Sum2,aes(d13C.m,d15N.m, label=Species)) + 
+  geom_point(size=8) +
+  geom_errorbarh(aes(xmax=All.Sp.Sum2$d13C.m+All.Sp.Sum2$d13C.sd,xmin=All.Sp.Sum2$d13C.m-All.Sp.Sum2$d13C.sd, height = 0.01)) +
+  geom_errorbar(aes(ymax=All.Sp.Sum2$d15N.m+All.Sp.Sum2$d15N.sd,ymin=All.Sp.Sum2$d15N.m-All.Sp.Sum2$d15N.sd, width = 0.01))+
+  geom_text(color='black', hjust=-0.03,vjust = -0.7, size = 10)+
+  xlab(expression(paste(delta^13, "C (\u2030)",sep="")))+ 
+  ylab(expression(paste(delta^15, "N (\u2030)",sep="")))+
+  theme_bw(base_size = 24, base_family = "Helvetica") +
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme(axis.text=element_text(size=28), axis.title=element_text(size=32,face="bold"))+
+  theme(legend.position="none")
+ggsave(filename="Appendix1_AllSpWithRagfish_Isotopes.png", plot=Ap1_AllSpRagfish, dpi=500, width=17, height=12, units="in")
+
+
+#Add humboldt squid for biplot:
+All.Prey.Sum3<-read.table(here::here('data/PmSources-IaDg.csv'),sep=",",header=TRUE)
+ggplot(All.Prey.Sum3, aes(Mean.d13C, Mean.d15N, color=Species, label=Species)) + geom_point(size=3)+
+  geom_errorbarh(aes(xmax=All.Prey.Sum3$Mean.d13C+All.Prey.Sum3$SD.d13C,xmin=All.Prey.Sum3$Mean.d13C-All.Prey.Sum3$SD.d13C, height = 0.01)) +
+  geom_errorbar(aes(ymax=All.Prey.Sum3$Mean.d15N+All.Prey.Sum3$SD.d15N,ymin=All.Prey.Sum3$Mean.d15N-All.Prey.Sum3$SD.d15N, width = 0.01))+
+  geom_text(color="black",hjust=-0.05,vjust = -0.7, size = 5)+
+  xlab(expression(paste(delta^13, "C (\u2030)")))+
+  ylab(expression(paste(delta^15, "N (\u2030)")))+
+  scale_color_viridis_d()+
+  theme_bw(base_size = 24, base_family = "Helvetica")+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())+
+  theme(legend.position="none")
+
+####################################################################
+# SIMM Data Appendix 1: All Species with Ragfish
+
+mixsiar.dir <- find.package("MixSIAR")
+paste0(mixsiar.dir,"/example_scripts")
+
+PmSimmData2<-read.table(here::here("data/PmSimmData2.csv"),sep=",",header=TRUE)
+
+
+#Full data set, no factors. 
+mixPm <- load_mix_data(filename="data/PmSimmData2.csv",
+                       iso_names=c("d13C","d15N"),
+                       factors=NULL,
+                       fac_random=NULL,
+                       fac_nested=NULL,
+                       cont_effects=NULL) #Needs to be in format of just d13C and d15N columns, and "factor" column if there is one. 
+#Temporal data with column of "old" or "recent" sample
+mixPmTemporal <- load_mix_data(filename="data/PmMixSIARDataTemporal.csv",
+                               iso_names=c("d13C","d15N"),
+                               factors='Temporal',
+                               fac_random=TRUE,
+                               fac_nested=FALSE,
+                               cont_effects=NULL)
+# "Seasonal" with Early, Mid, and Late season factor variable
+mixPmSeasonal <- load_mix_data(filename="data/PmMixSIARDataSeasonal.csv",
+                               iso_names=c("d13C","d15N"),
+                               factors='Season',
+                               fac_random=TRUE,
+                               fac_nested=FALSE,
+                               cont_effects=NULL)
+mixPmFreqNFreq <- load_mix_data(filename="data/PmMixSIARDataSerialNSerial.csv",
+                                iso_names=c("d13C","d15N"),
+                                factors='Frequent',
+                                fac_random=TRUE,
+                                fac_nested=FALSE,
+                                cont_effects=NULL)
+#Source data
+# Make sure the right source code is here... 
+sourcePm.Comb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
+                                  source_factors=NULL,
+                                  conc_dep=FALSE,
+                                  data_type="means",
+                                  mixPm)   #Source data frame needs to be in format: "Species", "Meand13C", "SDd13C", "Meand15N", "SDd15N", "n" (sample size each source)
+sourcePm.TempComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+                                      source_factors=NULL,
+                                      conc_dep=FALSE,
+                                      data_type="means",
+                                      mixPmTemporal)
+sourcePm.SeasonComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+                                        source_factors=NULL,
+                                        conc_dep=FALSE,
+                                        data_type="means",
+                                        mixPmSeasonal)
+sourcePm.FreqNFreqComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+                                           source_factors=NULL,
+                                           conc_dep=FALSE,
+                                           data_type="means",
+                                           mixPmFreqNFreq)
+discrPm.Comb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPm)
+discrPm.TempComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmTemporal)
+discrPm.SeasonComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmSeasonal)
+discrPm.FreqNFreqComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmFreqNFreq)
+
+# Make an isospace plot
+isospace<-plot_data(filename="isospace_plot_combined", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPm,sourcePm.Comb,discrPm.Comb) 
+coord_flip(isospace)
+plot_data(filename="isospace_plot_combined_Temporal", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmTemporal,sourcePm.TempComb,discrPm.TempComb)
+plot_data(filename="isospace_plot_combined_Seasonal", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmSeasonal,sourcePm.SeasonComb,discrPm.SeasonComb)
+plot_data(filename="isospace_plot_combined_FreqNFreq", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmFreqNFreq,sourcePm.FreqNFreqComb,discrPm.FreqNFreqComb)
+
+# Plot uninformative prior
+plot_prior(alpha.prior=1, sourcePm.Comb, filename = "prior_plot_pm_comb_uninf", plot_save_pdf=FALSE)
+plot_prior(alpha.prior=1, sourcePm.TempComb, filename = "prior_plot_pmTempComb_uninf", plot_save_pdf=TRUE)
+plot_prior(alpha.prior=1, sourcePm.SeasonComb, filename = "prior_plot_pmSeasonComb_uninf", plot_save_pdf=FALSE)
+plot_prior(alpha.prior=1, sourcePm.FreqNFreqComb, filename = "prior_plot_pmFnFComb_uninf", plot_save_pdf=FALSE)
+
+# Define model structure and write JAGS model file
+model_Pm.Comb <- "MixSIAR_model_Pm_Comb_uninf.txt"   # Name of the JAGS model file
+resid_err <- TRUE
+process_err <- TRUE
+write_JAGS_model(model_Pm.Comb, resid_err, process_err, mixPm, sourcePm.Comb)
+model_Pm_TempComb <- "MixSIAR_model_Pm_TempComb_uninf.txt" # Name of JAGS model file
+write_JAGS_model(model_Pm_TempComb, resid_err, process_err, mixPmTemporal, sourcePm.TempComb)
+model_Pm_SeasonComb <- "MixSIAR_model_Pm_SeasonComb_uninf.txt" # Name of JAGS model file
+write_JAGS_model(model_Pm_SeasonComb, resid_err, process_err, mixPmSeasonal, sourcePm.SeasonComb)
+model_Pm_FreqNFreqComb <- "MixSIAR_model_Pm_FreqNFreqComb_uninf.txt" # Name of JAGS model file
+write_JAGS_model(model_Pm_FreqNFreqComb, resid_err, process_err, mixPmFreqNFreq, sourcePm.FreqNFreqComb)
+
+# Run the JAGS model ("test" took ~20sec; "normal" should be good... about 35min, with chain length 100,000; burn in 50,000, and thin 50 with 3 chains and it seems to converge nicely) 
+# Pg 14 of MixSIAR manual lists how many MCMC burn-ins and chains each one uses ("very long" is 1,000,000 chain length, 500,000 burn-in, and thin by 500, should take about 5hr to run)
+jags.uninf.Pm.Comb <- run_model(run="normal",mixPm,sourcePm.Comb,discrPm.Comb,model_Pm.Comb,alpha.prior = 1, resid_err, process_err) #took 35 min to run.
+jags.uninf.Pm.TempComb <- run_model(run="normal",mixPmTemporal,sourcePm.TempComb,discrPm.TempComb, model_Pm_TempComb,alpha.prior = 1, resid_err, process_err) #'normal' took 35min 
+jags.uninf.Pm.SeasonComb <- run_model(run="normal",mixPmSeasonal,sourcePm.SeasonComb,discrPm.SeasonComb,model_Pm_SeasonComb,alpha.prior = 1, resid_err, process_err) #Took 35min
+jags.uninf.Pm.FreqNFreqComb <- run_model(run="normal",mixPmFreqNFreq,sourcePm.FreqNFreqComb, discrPm.FreqNFreqComb,model_Pm_FreqNFreqComb,alpha.prior = 1, resid_err, process_err) #Took 35min to run
+
+# get posterior medians for new source groupings
+#apply(combined$post, 2, median)
+#summary_stat(jags.uninf.Pm.Comb, meanSD=FALSE, quantiles=c(.025,.5,.975), savetxt=FALSE)
+
+# Process diagnostics, summary stats, and posterior plots
+jags_output_fullmodel<- output_JAGS(jags.uninf.Pm.Comb, mixPm, sourcePm.Comb) #DIC=119.4686
+jags_output_tempcomb<- output_JAGS(jags.uninf.Pm.TempComb, mixPmTemporal, sourcePm.TempComb) #DIC 118.4287 - model doesn't converge super well, might need to run more iterations! 
+jags_output_seasoncomb<- output_JAGS(jags.uninf.Pm.SeasonComb, mixPmSeasonal, sourcePm.SeasonComb) #DIC 120.8179 - model did converge pretty well,
+jags_output_fnfcomb<- output_JAGS(jags.uninf.Pm.FreqNFreqComb, mixPmFreqNFreq, sourcePm.FreqNFreqComb) #DIC 114.8703 - model converged pretty well
+
+#Using saveRDS to save jags model output - isn't working, but leaving code here:
+saveRDS(output_JAGS(jags.uninf.Pm.TempComb, mixPmTemporal, sourcePm.TempComb), file = "jags_output_tempcomb.rds") #Saves the jags model output! 
+saveRDS(jags_output_seasoncomb, file = "jags_output_seasoncomb.rds") #Saves the jags model output!
+readRDS(file="jags_output_tempcomb.rds")
+
+### Use this code to access posterior density outputs from the models:
+jags.uninf.Pm.TempComb$BUGSoutput #Look at the model output to isolate posterior densities... 
+jags.uninf.Pm.TempComb$BUGSoutput$sims.list$p.global[,1] #gives posterior output for first species
+jags.uninf.Pm.TempComb$BUGSoutput$mean$p.global #gives means for each species
+jags.uninf.Pm.TempComb$BUGSoutput$mean$p.fac1 #gives mean for each species and each whale group
+jags.uninf.Pm.TempComb$BUGSoutput$sims.list$p.fac1[,,5] #gives posterior for each whale group of just my 5th prey item (sablefish group)
+
+# Find out which group is "Frequent" depredators:
+freq_level = which(levels(mixPmFreqNFreq$data$Frequent) == "Frequent") #first column
+# Find out which group is "Non-Frequent" depredators:
+nonfreq_level = which(levels(mixPmFreqNFreq$data$Frequent) == "Non-Frequent") #2nd column
+# Find out which source is "Sablefish.Dogfish"
+source_1 = which(sourcePm.FreqNFreqComb$source_names == "Sablefish.Dogfish")
+# Find out which source is "Skates"
+source_2 = which(sourcePm.FreqNFreqComb$source_names == "Skate")
+
+which(levels(mixPmTemporal$data$Temporal)=="Old") # [1] 1
+which(levels(mixPmTemporal$data$Temporal)=="Recent") # [1] 2
+which(sourcePm.TempComb$source_names == "Clubhook Squid") # [1] 1
+which(sourcePm.TempComb$source_names == "Grenadier") # [1] 2
+which(sourcePm.TempComb$source_names == "Magister Squid") # [1] 3
+which(sourcePm.TempComb$source_names == "Sablefish.Dogfish") #[1] 4
+which(sourcePm.TempComb$source_names == "Shortraker Rockfish") #[1] 5
+which(sourcePm.TempComb$source_names == "Skate") #[1] 6
+which(sourcePm.SeasonComb$source_names == "Clubhook Squid") # [1] 1
+which(sourcePm.SeasonComb$source_names == "Grenadier") # [1] 2
+which(sourcePm.SeasonComb$source_names == "Magister Squid") # [1] 3
+which(sourcePm.SeasonComb$source_names == "Sablefish.Dogfish") #[1] 4
+which(sourcePm.SeasonComb$source_names == "Shortraker Rockfish") #[1] 5
+which(sourcePm.SeasonComb$source_names == "Skate") #[1] 6
+
+#Prey List: 1=Clubhook squid, 2=Grenadier, 3=Magister Squid, 4=Sablefish Group, 5=Shortraker rockfish, 6=Skate
+#Predator Factor List: TempComb (1=Old, 2=Recent); SeasonComb (1=Early, 2=Late, 3=Mid); FreqNFreqComb (1=Freq, 2=Non-Freq, 3=Unk)
+AllCombSummary<-jags.uninf.Pm.Comb$BUGSoutput$summary
+write.table(AllCombSummary, file="AllCombSum.csv",sep=',')
+TempCombSummary<-jags.uninf.Pm.TempComb$BUGSoutput$summary
+TempCombSummary2<-TempCombSummary[c("p.fac1[1,1]","p.fac1[2,1]","p.fac1[1,2]","p.fac1[2,2]","p.fac1[1,3]","p.fac1[2,3]","p.fac1[1,4]","p.fac1[2,4]","p.fac1[1,5]","p.fac1[2,5]","p.fac1[1,6]","p.fac1[2,6]"),]
+write.table(TempCombSummary2, file="TempCombSum.csv", sep=',')
+SeasonCombSummary<-jags.uninf.Pm.SeasonComb$BUGSoutput$summary
+SeasonCombSummary2<-SeasonCombSummary[c("p.fac1[1,1]","p.fac1[2,1]","p.fac1[3,1]","p.fac1[1,2]","p.fac1[2,2]","p.fac1[3,2]","p.fac1[1,3]","p.fac1[2,3]","p.fac1[3,3]","p.fac1[1,4]","p.fac1[2,4]","p.fac1[3,4]","p.fac1[1,5]","p.fac1[2,5]","p.fac1[3,5]","p.fac1[1,6]","p.fac1[2,6]","p.fac1[3,6]"),]
+write.table(SeasonCombSummary2, file="SeasonCombSum2.csv", sep=',')
+FNFCombSummary<-jags.uninf.Pm.FreqNFreqComb$BUGSoutput$summary
+FNFCombSummary2<-FNFCombSummary[c("p.fac1[1,1]","p.fac1[2,1]","p.fac1[3,1]","p.fac1[1,2]","p.fac1[2,2]","p.fac1[3,2]","p.fac1[1,3]","p.fac1[2,3]","p.fac1[3,3]","p.fac1[1,4]","p.fac1[2,4]","p.fac1[3,4]","p.fac1[1,5]","p.fac1[2,5]","p.fac1[3,5]","p.fac1[1,6]","p.fac1[2,6]","p.fac1[3,6]"),]
+write.table(FNFCombSummary2, file="FNFCombSum2.csv", sep=',')
+
+jags.uninf.Pm.TempComb$BUGSoutput$median$p.fac1 #gives just median, but shouldn't need, as it is also 50% in the full output summary above... 
+jags.uninf.Pm.FreqNFreqComb$BUGSoutput$median$p.fac1
+jags.uninf.Pm.SeasonComb$BUGSoutput$median$p.fac1
+
+TempCombSumBox<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/TempCombSumBox3.csv',sep=",",header=TRUE)
+TempCombSumBox$Middle<-as.numeric(TempCombSumBox$Middle)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+A<-ggplot(TempCombSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax, color=Group, fill=Group), stat="identity", color="black") +
+  scale_fill_manual(values=c("grey",'white'))+
+  ylab("Proportion of Diet")+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),axis.text.y=element_text(size=12), axis.title.x=element_blank(), axis.title.y=element_text(size=14))+
+  theme(legend.justification=c(0.8,0), legend.position=c(0.18,0.6))+
+  theme(legend.box.background=element_rect(color="black"))+
+  theme(legend.title=element_blank(), legend.text=element_text(size=11))+
+  theme(legend.key.size=unit(0.8,'cm'))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+
+A
+
+SeasonCombSumBox<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/SeasonCombSumBox2.csv',sep=",",header=TRUE)
+SeasonCombSumBox$Group<-factor(SeasonCombSumBox$Group, levels=c("Early","Mid","Late"), ordered=TRUE)
+B<-ggplot(SeasonCombSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax, color=Group, fill=Group), stat="identity", color="black") +
+  scale_fill_manual(values=c("grey",'white',"gray47"))+
+  ylab("Proportion of Diet")+
+  theme_bw()+
+  theme(axis.text.x = element_blank(),axis.text.y=element_text(size=12), axis.title.x=element_blank(), axis.title.y=element_text(size=14))+
+  theme(legend.justification=c(0.8,0), legend.position=c(0.15,0.5))+
+  theme(legend.box.background=element_rect(color="black"))+
+  theme(legend.title=element_blank(), legend.text=element_text(size=11))+
+  theme(legend.key.size=unit(0.8,'cm'))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+B
+
+FNFCombSumBox<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/FNFCombSumBox2.csv',sep=",",header=TRUE)
+C<- ggplot(FNFCombSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax, color=Group,fill=Group), stat="identity", color="black") +
+  scale_fill_manual(values=c("grey",'white'))+
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle=45,hjust=1, size=12),axis.text.y=element_text(size=12), axis.title.x=element_text(size=14), axis.title.y=element_text(size=14))+
+  theme(legend.justification=c(0.8,0), legend.position=c(0.24,0.6))+
+  theme(legend.box.background=element_rect(color="black"))+
+  theme(legend.title=element_blank(), legend.text=element_text(size=11))+
+  theme(legend.key.size=unit(0.8,'cm'))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+C
+
+#library(egg)
+#library(gridExtra)
+#library(reshape)
+
+Fig3<-ggarrange(A,B,C, labels = c("A", "B", "C"), ncol=1, nrow=3)
+setwd('/Users/laurenwild/Desktop')
+tiff(filename="Fig3_boxplots.tiff", height = 24, width = 17, units = 'cm', 
+     compression = "lzw", res = 200)
+Fig3
+dev.off()
+
+#ggsave(filename="Fig3_MixingModels.png", plot=Fig3, dpi=500, width=16, height=32, units="in")
+

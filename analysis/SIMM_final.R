@@ -386,7 +386,6 @@ mixPmFreqNFreq <- load_mix_data(filename="PmMixSIARDataSerialNSerial.csv",
                                 fac_nested=FALSE,
                                 cont_effects=NULL)
 
-
 #Load in source data for MixSIAR:
 sourcePm.Comb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
                                   source_factors=NULL,
