@@ -140,10 +140,9 @@ ggsave(filename="Appendix1_AllSpWithRagfish_Isotopes.png", plot=Ap1_AllSpRagfish
 
 ####################################################################
 # SIMM Data Appendix 1: 
-# All Species with Ragfish; I ran this with sablefish, dogfish & ragfish combined. 
-#   [because of similarity in isotopic values/isotope space]
-# All Species without combining Sablefish & Dogfish
-
+# Mixing model results including ragfish in models
+# I ran this with sablefish, dogfish & ragfish combined. 
+#      [because of similarity in isotopic values/isotope space]
 
 mixsiar.dir <- find.package("MixSIAR")
 #paste0(mixsiar.dir,"/example_scripts")
@@ -179,8 +178,8 @@ mixPmFreqNFreq <- load_mix_data(filename="data/PmMixSIARDataSerialNSerial.csv",
                                 fac_nested=FALSE,
                                 cont_effects=NULL)
 
+
 #Source data; first for no combination of sablefish & dogfish
-# Make sure the right source code is here... 
 sourcePm.Ia.Comb <- load_source_data(filename="data/Appendix1/PmSources-Ia-SaAfIaComb.csv",
                                   source_factors=NULL,
                                   conc_dep=FALSE,
@@ -205,18 +204,6 @@ discrPm.Ia.Comb <- load_discr_data(filename="data/Appendix1/PmSourceTEFsd-Ia-AfI
 discrPm.Ia.TempComb <- load_discr_data(filename="data/Appendix1/PmSourceTEFsd-Ia-AfIaSaComb.csv", mixPmTemporal)
 discrPm.Ia.SeasonComb <- load_discr_data(filename="data/Appendix1/PmSourceTEFsd-Ia-AfIaSaComb.csv", mixPmSeasonal)
 discrPm.Ia.FreqNFreqComb <- load_discr_data(filename="data/Appendix1/PmSourceTEFsd-Ia-AfIaSaComb.csv", mixPmFreqNFreq)
-
-# Make an isospace plot
-isospace<-plot_data(filename="isospace_plot_combined", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPm,sourcePm.Ia.Comb,discrPm.Ia.Comb) 
-plot_data(filename="isospace_plot_combined_Temporal", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmTemporal,sourcePm.Ia.TempComb,discrPm.Ia.TempComb)
-plot_data(filename="isospace_plot_combined_Seasonal", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmSeasonal,sourcePm.Ia.SeasonComb,discrPm.Ia.SeasonComb)
-plot_data(filename="isospace_plot_combined_FreqNFreq", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPmFreqNFreq,sourcePm.Ia.FreqNFreqComb,discrPm.Ia.FreqNFreqComb)
-
-# Plot uninformative prior
-plot_prior(alpha.prior=1, sourcePm.Ia.Comb, filename = "prior_plot_pm_ia_comb_uninf", plot_save_pdf=FALSE)
-plot_prior(alpha.prior=1, sourcePm.Ia.TempComb, filename = "prior_plot_pm_ia_TempComb_uninf", plot_save_pdf=TRUE)
-plot_prior(alpha.prior=1, sourcePm.Ia.SeasonComb, filename = "prior_plot_pm_ia_SeasonComb_uninf", plot_save_pdf=FALSE)
-plot_prior(alpha.prior=1, sourcePm.Ia.FreqNFreqComb, filename = "prior_plot_pm_ia_FnFComb_uninf", plot_save_pdf=FALSE)
 
 # Define model structure and write JAGS model file
 resid_err <- TRUE
@@ -319,11 +306,14 @@ B<-ggplot(SeasonCombIaSumBox, aes(x, Middle)) +
 B
 
 FNFCombIaSumBox<- read.table('data/Appendix1/FNFCombIaSumBox.csv',sep=",",header=TRUE)
+library(stringr)
+
 C<- ggplot(FNFCombIaSumBox, aes(x, Middle)) +
   geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax, color=Group,fill=Group), stat="identity", color="black") +
   scale_fill_manual(values=c("grey",'white'))+
   xlab("Species") +
   ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
   theme_bw()+
   theme(axis.text.x = element_text(angle=45,hjust=1, size=12),axis.text.y=element_text(size=12), axis.title.x=element_text(size=14), axis.title.y=element_text(size=14))+
   theme(legend.justification=c(0.8,0), legend.position=c(0.24,0.6))+
@@ -333,9 +323,84 @@ C<- ggplot(FNFCombIaSumBox, aes(x, Middle)) +
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
 C
 
-#library(egg)
-#library(gridExtra)
-#library(reshape)
+Fig2_Appendix1<-ggarrange(A,B,C, labels = c("A", "B", "C"), ncol=1, nrow=3)
+tiff(filename="Fig2_Appendix1_boxplots.tiff", height = 24, width = 17, units = 'cm', 
+     compression = "lzw", res = 200)
+Fig2_Appendix1
+dev.off()
+
+AllCombIaSumBox<-read.table('data/Appendix1/AllCombIaSumBox.csv', sep=",",header=TRUE)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+AllCombIa<-ggplot(AllCombIaSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax), stat="identity", fill="grey", color="black") +
+  #scale_fill_manual(values=c("grey"))+
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=24),axis.text.y=element_text(size=24), axis.title.x=element_text(size=28), axis.title.y=element_text(size=28))+
+  #theme(legend.justification=c(0.8,0), legend.position=c(0.18,0.6))+
+  #theme(legend.box.background=element_rect(color="black"))+
+  #theme(legend.title=element_blank(), legend.text=element_text(size=11))+
+  #theme(legend.key.size=unit(0.8,'cm'))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+AllCombIa
+ggsave(filename="Appendix1_AllSpWithRagfish_Boxplot.png", plot=AllCombIa, dpi=500, width=17, height=12, units="in")
+
+
+#################################################################################
+# Mixing model results separating sablefish and dogfish
+#
+# Mixtures (sperm whales) are the same, just need to re-organize sources
+
+sourcePm.All7.Comb <- load_source_data(filename="data/Appendix1/PmSources.csv",
+                                     source_factors=NULL,
+                                     conc_dep=FALSE,
+                                     data_type="means",
+                                     mixPm)   #Source data frame needs to be in format: "Species", "Meand13C", "SDd13C", "Meand15N", "SDd15N", "n" (sample size each source)
+
+discrPm.All7.Comb <- load_discr_data(filename="data/Appendix1/PmSourceTEF.csv", mixPm)
+
+# Define model structure and write JAGS model file
+resid_err <- TRUE
+process_err <- TRUE
+model_Pm_All7_Comb <- "MixSIAR_model_Pm_All7_Comb_uninf.txt"   # Name of the JAGS model file
+write_JAGS_model(model_Pm_All7_Comb, resid_err, process_err, mixPm, sourcePm.All7.Comb)
+
+# Run the JAGS model ("normal"; chain length 100,000; burn in 50,000, and thin 50; with 3 chains; it seems to converge nicely) 
+jags.uninf.Pm.All7.Comb <- run_model(run="normal",mixPm,sourcePm.All7.Comb,discrPm.All7.Comb,model_Pm_All7_Comb,alpha.prior = 1, resid_err, process_err) #took 25 min to run.
+
+which(sourcePm.All7.Comb$source_names == "Clubhook Squid") # [1] 1
+which(sourcePm.All7.Comb$source_names == "Grenadier") # [1] 2
+which(sourcePm.All7.Comb$source_names == "Magister Squid") # [1] 3
+which(sourcePm.All7.Comb$source_names == "Sablefish") #[1] 4
+which(sourcePm.All7.Comb$source_names == "Spiny Dogfish") #[1] 7
+which(sourcePm.All7.Comb$source_names == "Shortraker Rockfish") #[1] 5
+which(sourcePm.All7.Comb$source_names == "Skate") #[1] 6
+#Prey List: 1=Clubhook squid, 2=Grenadier, 3=Magister Squid, 4=Sablefish, 5=Shortraker rockfish, 6=Skate, 7=Dogfish
+
+AllCombAll7Summary<-jags.uninf.Pm.All7.Comb$BUGSoutput$summary
+write.table(AllCombAll7Summary, file="AllCombAll7Sum.csv",sep=',')
+
+AllCombAll7SumBox<-read.table('data/Appendix1/AllCombAll7SumBox.csv', sep=",",header=TRUE)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+
+All7<-ggplot(AllCombAll7SumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax), stat="identity", fill="grey", color="black") +
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=24),axis.text.y=element_text(size=24), axis.title.x=element_text(size=28), axis.title.y=element_text(size=28))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+All7
+
+ggsave(filename="Appendix1_AllSp_AfSa_separate_Boxplot.png", plot=All7, dpi=500, width=17, height=12, units="in")
+
 
 Fig2_Appendix1<-ggarrange(A,B,C, labels = c("A", "B", "C"), ncol=1, nrow=3)
 tiff(filename="Fig2_Appendix1_boxplots.tiff", height = 24, width = 17, units = 'cm', 
@@ -343,5 +408,87 @@ tiff(filename="Fig2_Appendix1_boxplots.tiff", height = 24, width = 17, units = '
 Fig2_Appendix1
 dev.off()
 
-#ggsave(filename="Fig3_MixingModels.png", plot=Fig3, dpi=500, width=16, height=32, units="in")
+##########################################################################################
+# Mixing model results for low TEF & high TEF
+# 
+# Mixtures (sperm whales) are the same, just need to re-organize source TEFs
+#
+# #Load in source data for MixSIAR:
+sourcePm.LowHighTEF.Comb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
+                                  source_factors=NULL,
+                                  conc_dep=FALSE,
+                                  data_type="means",
+                                  mixPm)   #Source data frame needs to be in format: "Species", "Meand13C", "SDd13C", "Meand15N", "SDd15N", "n" (sample size each source)
+
+
+discrPm.LowTEF.Comb <- load_discr_data(filename="data/Appendix1/PmSourceTEF1.6-AfSaComb.csv", mixPm)
+discrPm.HighTEF.Comb <- load_discr_data(filename="data/Appendix1/PmSourceTEF2.8-AfSaComb.csv", mixPm)
+
+model_Pm_LowTEF_Comb <- "MixSIAR_model_Pm_LowTEF_Comb_uninf.txt"   # Name of the JAGS model file
+write_JAGS_model(model_Pm_LowTEF_Comb, resid_err, process_err, mixPm, sourcePm.LowHighTEF.Comb)
+model_Pm_HighTEF_Comb <- "MixSIAR_model_Pm_HighTEF_Comb_uninf.txt"
+write_JAGS_model(model_Pm_HighTEF_Comb, resid_err, process_err, mixPm, sourcePm.LowHighTEF.Comb)
+
+# Run the JAGS model
+jags.uninf.Pm.LowTEF.Comb <- run_model(run="normal",mixPm,sourcePm.LowHighTEF.Comb,discrPm.LowTEF.Comb,model_Pm_LowTEF_Comb,alpha.prior = 1, resid_err, process_err) #took 25 min to run
+jags.uninf.Pm.HighTEF.Comb <- run_model(run="normal",mixPm,sourcePm.LowHighTEF.Comb,discrPm.HighTEF.Comb,model_Pm_HighTEF_Comb,alpha.prior = 1, resid_err, process_err) #took 25 min to run
+
+which(sourcePm.LowHighTEF.Comb$source_names == "Clubhook Squid") # [1] 1
+which(sourcePm.LowHighTEF.Comb$source_names == "Grenadier") # [1] 2
+which(sourcePm.LowHighTEF.Comb$source_names == "Magister Squid") # [1] 3
+which(sourcePm.LowHighTEF.Comb$source_names == "Sablefish.Dogfish") #[1] 4
+which(sourcePm.LowHighTEF.Comb$source_names == "Shortraker Rockfish") #[1] 5
+which(sourcePm.LowHighTEF.Comb$source_names == "Skate") #[1] 6
+#Prey List: 1=Clubhook squid, 2=Grenadier, 3=Magister Squid, 4=Sablefish.Dogfish, 5=Shortraker rockfish, 6=Skate
+
+AllCombLowTEFSummary<-jags.uninf.Pm.LowTEF.Comb$BUGSoutput$summary
+write.table(AllCombLowTEFSummary, file="AllCombLowTEFSum.csv",sep=',')
+AllCombHighTEFSummary<-jags.uninf.Pm.HighTEF.Comb$BUGSoutput$summary
+write.table(AllCombHighTEFSummary, file="AllCombHighTEFSum.csv",sep=',')
+
+AllCombLowTEFSumBox<-read.table('data/Appendix1/AllCombLowTEFSumBox.csv', sep=",",header=TRUE)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+LowTEF<-ggplot(AllCombLowTEFSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax), stat="identity", fill="grey", color="black") +
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=24),axis.text.y=element_text(size=24), axis.title.x=element_text(size=28), axis.title.y=element_text(size=28))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+LowTEF
+ggsave(filename="Appendix1_LowTEF_Boxplot.png", plot=LowTEF, dpi=500, width=17, height=12, units="in")
+
+AllCombHighTEFSumBox<-read.table('data/Appendix1/AllCombHighTEFSumBox.csv', sep=",",header=TRUE)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+HighTEF<-ggplot(AllCombHighTEFSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax), stat="identity", fill="grey", color="black") +
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=24),axis.text.y=element_text(size=24), axis.title.x=element_text(size=28), axis.title.y=element_text(size=28))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+HighTEF
+ggsave(filename="Appendix1_HighTEF_Boxplot.png", plot=HighTEF, dpi=500, width=17, height=12, units="in")
+
+##############################################################################################
+library(simmr)
+PmSimmData3<-as.matrix(PmSimmData2) #[,c(2,1)]
+PmSources<-read.csv(here::here("data/PmSources_SaAf_Comb.csv"), sep=",",header=TRUE)
+colnames(PmSources)<-c("Species","d13C.m", "d13C.sd","d15N.m", "d15N.sd", "n")
+PmSources<-PmSources[,c(1,2,3,4,5)]
+SourceTEFLow<- read.csv(here:here("data/Appendix1/PmSourceTEF1.6-AfSaComb.csv"), sep=",", header=TRUE)
+
+simmr_1_comb = simmr_load(mixtures=PmSimmData3,  
+                          source_names=as.character(PmSources[,1]),
+                          source_means=PmSources[,c(2,4)],
+                          source_sds=PmSources[,c(3,5)],
+                          correction_means=SourceTEFsd[,c(2,4)],
+                          correction_sds=SourceTEFsd[,c(3,5)])
+
 

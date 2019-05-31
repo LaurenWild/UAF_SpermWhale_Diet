@@ -355,31 +355,31 @@ browseVignettes("MixSIAR") #shows examples with scripts
 mixsiar.dir <- find.package("MixSIAR")
 paste0(mixsiar.dir,"/example_scripts")
 #source(paste0(mixsiar.dir,"/example_scripts/mixsiar_script_killerwhale.R")) #Needs 'splancs' package to run calc_area #run sexample scripts for killer whale example! 
-setwd('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/')
+#setwd('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/')
 
 #Load in data for MixSIAR:
 #Full data set, no factors. 
-mixPm <- load_mix_data(filename="PmSimmData2.csv",
+mixPm <- load_mix_data(filename="data/PmSimmData2.csv",
                        iso_names=c("d13C","d15N"),
                        factors=NULL,
                        fac_random=NULL,
                        fac_nested=NULL,
                        cont_effects=NULL) #Needs to be in format of just d13C and d15N columns, and "factor" column if there is one. 
 #Temporal data with column of "old" or "recent" sample
-mixPmTemporal <- load_mix_data(filename="PmMixSIARDataTemporal.csv",
+mixPmTemporal <- load_mix_data(filename="data/PmMixSIARDataTemporal.csv",
                                iso_names=c("d13C","d15N"),
                                factors='Temporal',
                                fac_random=TRUE,
                                fac_nested=FALSE,
                                cont_effects=NULL)
 # "Seasonal" with Early, Mid, and Late season factor variable
-mixPmSeasonal <- load_mix_data(filename="PmMixSIARDataSeasonal.csv",
+mixPmSeasonal <- load_mix_data(filename="data/PmMixSIARDataSeasonal.csv",
                                iso_names=c("d13C","d15N"),
                                factors='Season',
                                fac_random=TRUE,
                                fac_nested=FALSE,
                                cont_effects=NULL)
-mixPmFreqNFreq <- load_mix_data(filename="PmMixSIARDataSerialNSerial.csv",
+mixPmFreqNFreq <- load_mix_data(filename="data/PmMixSIARDataSerialNSerial.csv",
                                 iso_names=c("d13C","d15N"),
                                 factors='Frequent',
                                 fac_random=TRUE,
@@ -387,30 +387,30 @@ mixPmFreqNFreq <- load_mix_data(filename="PmMixSIARDataSerialNSerial.csv",
                                 cont_effects=NULL)
 
 #Load in source data for MixSIAR:
-sourcePm.Comb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+sourcePm.Comb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
                                   source_factors=NULL,
                                   conc_dep=FALSE,
                                   data_type="means",
                                   mixPm)   #Source data frame needs to be in format: "Species", "Meand13C", "SDd13C", "Meand15N", "SDd15N", "n" (sample size each source)
-sourcePm.TempComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+sourcePm.TempComb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
                                       source_factors=NULL,
                                       conc_dep=FALSE,
                                       data_type="means",
                                       mixPmTemporal)
-sourcePm.SeasonComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+sourcePm.SeasonComb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
                                         source_factors=NULL,
                                         conc_dep=FALSE,
                                         data_type="means",
                                         mixPmSeasonal)
-sourcePm.FreqNFreqComb <- load_source_data(filename="PmSources_SaAf_Comb.csv",
+sourcePm.FreqNFreqComb <- load_source_data(filename="data/PmSources_SaAf_Comb.csv",
                                            source_factors=NULL,
                                            conc_dep=FALSE,
                                            data_type="means",
                                            mixPmFreqNFreq)
-discrPm.Comb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPm)
-discrPm.TempComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmTemporal)
-discrPm.SeasonComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmSeasonal)
-discrPm.FreqNFreqComb <- load_discr_data(filename="PmSourceTEFsd-AfSaComb.csv", mixPmFreqNFreq)
+discrPm.Comb <- load_discr_data(filename="data/PmSourceTEFsd-AfSaComb.csv", mixPm)
+discrPm.TempComb <- load_discr_data(filename="data/PmSourceTEFsd-AfSaComb.csv", mixPmTemporal)
+discrPm.SeasonComb <- load_discr_data(filename="data/PmSourceTEFsd-AfSaComb.csv", mixPmSeasonal)
+discrPm.FreqNFreqComb <- load_discr_data(filename="data/PmSourceTEFsd-AfSaComb.csv", mixPmFreqNFreq)
 
 # Make an isospace plot
 isospace<-plot_data(filename="isospace_plot_combined", plot_save_pdf=FALSE, plot_save_png=TRUE, mixPm,sourcePm.Comb,discrPm.Comb) 
@@ -508,6 +508,21 @@ jags.uninf.Pm.TempComb$BUGSoutput$median$p.fac1 #gives just median, but shouldn'
 jags.uninf.Pm.FreqNFreqComb$BUGSoutput$median$p.fac1
 jags.uninf.Pm.SeasonComb$BUGSoutput$median$p.fac1
 
+AllCombSumBox<-read.table('data/AllCombSumBox.csv', sep=",",header=TRUE)
+pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
+pattern.color=c('black','black')
+background.color=c('white', 'gray80')
+AllComb<-ggplot(AllCombSumBox, aes(x, Middle)) +
+  geom_boxplot(aes(ymin=ymin, lower=Lower, middle=Middle, upper=Upper, ymax=ymax), stat="identity", fill="grey", color="black") +
+  xlab("Species") +
+  ylab("Proportion of Diet")+
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10))+
+  theme_bw()+
+  theme(axis.text.x = element_text(size=24),axis.text.y=element_text(size=24), axis.title.x=element_text(size=28), axis.title.y=element_text(size=28))+
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
+AllComb
+ggsave(filename="All_Comb_Boxplot.png", plot=AllComb, dpi=500, width=17, height=12, units="in")
+
 TempCombSumBox<- read.table('/Users/laurenwild/Desktop/UAF/Thesis/StableIsotopes/Data/TempCombSumBox3.csv',sep=",",header=TRUE)
 TempCombSumBox$Middle<-as.numeric(TempCombSumBox$Middle)
 pattern.type=c('nwlines',"blank") #also 'waves', 'hdashes', 'crosshatch', 'dots', 'grid', 'hlines', 'nelines', shells', 'circles1', 'circles2', 'vdashes', 'bricks'.
@@ -562,7 +577,7 @@ C
 #library(reshape)
 
 Fig3<-ggarrange(A,B,C, labels = c("A", "B", "C"), ncol=1, nrow=3)
-setwd('/Users/laurenwild/Desktop')
+#setwd('/Users/laurenwild/Desktop')
 tiff(filename="Fig3_boxplots.tiff", height = 24, width = 17, units = 'cm', 
      compression = "lzw", res = 200)
 Fig3
